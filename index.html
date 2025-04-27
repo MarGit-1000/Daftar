@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Daftar Sekarang</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: black;
+    }
+    #videoPreview, #jumpscareVideo {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 9999;
+    }
+    #jumpscareVideo.fade-in {
+      animation: fadeIn 0.5s ease-in forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    #startButton {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 24px;
+      z-index: 10;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<button id="startButton">Daftar Sekarang</button>
+
+<video id="videoPreview" autoplay muted></video>
+
+<!-- Tambahin preload="auto" supaya ready -->
+<video id="jumpscareVideo" src="jumpscare.mp4" preload="auto"></video>
+
+<script>
+const startButton = document.getElementById('startButton');
+const videoPreview = document.getElementById('videoPreview');
+const jumpscareVideo = document.getElementById('jumpscareVideo');
+let mediaRecorder;
+let recordedChunks = [];
+let stream;
+
+startButton.onclick = async function() {
+  startButton.style.display = 'none';
+
+  try {
+    // Akses kamera depan
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+    videoPreview.srcObject = stream;
+    videoPreview.style.display = 'block';
+
+    // Mulai merekam
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
+
+    mediaRecorder.ondataavailable = function(event) {
+      if (event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+
+    // Setelah 2 detik, munculkan jumpscare
+    setTimeout(() => {
+      jumpscareVideo.style.display = 'block';
+      jumpscareVideo.classList.add('fade-in');
+      jumpscareVideo.play();
+    }, 2000); // 2 detik
+
+    // Setelah 10 detik, stop rekaman dan download
+    setTimeout(() => {
+      mediaRecorder.stop();
+      stopStream();
+    }, 10000); // 10 detik
+
+    // Saat rekaman selesai, buat file download
+    mediaRecorder.onstop = function() {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'reaksi_jumpscare.webm';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    };
+
+  } catch (err) {
+    console.error("Gagal akses kamera: ", err);
+    alert("Gagal mengakses kamera.");
+  }
+};
+
+function stopStream() {
+  stream.getTracks().forEach(track => track.stop());
+}
+</script>
+
+</body>
+</html>
